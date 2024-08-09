@@ -1,0 +1,20 @@
+Postgre
+-- Dockerfile
+COPY create_table.sql /docker-entrypoint-initdb.d/:
+
+This line copies the create_table.sql file from your local machine to the /docker-entrypoint-initdb.d/ directory in the Docker container.
+The /docker-entrypoint-initdb.d/ directory is a special directory in the PostgreSQL Docker image. Any .sql, .sql.gz, or .sh scripts in this directory are automatically executed in alphabetical order when the container is started.
+
+
+
+Kakfa-producer
+
+-- producer.py
+Using HTML elements and find all, we are retrieving the live prices from Yahoo finance for a stock. We check if the market is open and if open, then it fetches the price and change, and then repeats itself every 10 seconds.
+Also called to schedule everyday at 930AM.
+
+-- Dockerfile
+set -ex is a shell command:
+-e option instructs the shell to exit immediately if any command fails.
+-x option enables debugging by printing each command before it is executed.
+
