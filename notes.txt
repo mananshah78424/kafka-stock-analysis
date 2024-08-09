@@ -18,3 +18,8 @@ set -ex is a shell command:
 -e option instructs the shell to exit immediately if any command fails.
 -x option enables debugging by printing each command before it is executed.
 
+./wait-for-it.sh -s -t 30 $ZOOKEEPER_SERVER --
+-s: Silent mode, which might suppress output.
+-t 30: Timeout of 30 seconds for waiting.
+$ZOOKEEPER_SERVER: Environment variable containing the address of the Zookeeper server.
+--: Indicates the end of options for wait-for-it.sh, and that the next argument is the command to run after the wait.

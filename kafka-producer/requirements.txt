@@ -3,4 +3,5 @@ python-dotenv
 requests
 pytz
 schedule
-datetime
+beautifulsoup4
+lxml

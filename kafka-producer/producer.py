@@ -44,7 +44,7 @@ def is_market_open():
         if market_open_time <= current_time <= market_close_time:
             return True
     return False
-
+est = pytz.timezone('US/Eastern')
 
 def schedule_next_market_open():
     est = pytz.timezone('US/Eastern')
@@ -59,7 +59,9 @@ def schedule_next_market_open():
 def display_data():
     if is_market_open():
         price, change = real_time_price('BRK-B')
-        print(f"Price: {price}, Change: {change}")
+        now = datetime.now(est)
+
+        print(f"Price: {price}, Change: {change}, Time: {now}")
     else:
         print("Market has closed")
         schedule.clear()
