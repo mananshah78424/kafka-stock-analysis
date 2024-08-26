@@ -13,6 +13,8 @@ Kakfa-producer
 Using HTML elements and find all, we are retrieving the live prices from Yahoo finance for a stock. We check if the market is open and if open, then it fetches the price and change, and then repeats itself every 10 seconds.
 Also called to schedule everyday at 930AM.
 
+If market_open, run main() else schedule_next_open. 
+
 -- Dockerfile
 set -ex is a shell command:
 -e option instructs the shell to exit immediately if any command fails.
@@ -23,3 +25,75 @@ set -ex is a shell command:
 -t 30: Timeout of 30 seconds for waiting.
 $ZOOKEEPER_SERVER: Environment variable containing the address of the Zookeeper server.
 --: Indicates the end of options for wait-for-it.sh, and that the next argument is the command to run after the wait.
+
+
+
+
+
+-- Stock.java
+Default Constructor
+Definition: A default constructor is a no-argument constructor that the Java compiler provides automatically if no constructors are explicitly defined in the class.
+Initialization: It initializes the instance variables with their default values (e.g., null for objects, 0 for numeric types, false for boolean).
+
+
+-- Deserialization.java
+The deserialization schema describes how to turn the byte messages delivered by certain data sources (for example Apache Kafka) into data types (Java/Scala objects) that are processed by Flink.
+In addition, the DeserializationSchema describes the produced type (ResultTypeQueryable.getProducedType()), which lets Flink create internal serializers and structures to handle the type.
+
+
+ObjectMapper ) is the simplest way to parse JSON with Jackson in Java. The Jackson ObjectMapper can parse JSON from a string, stream or file, and create a Java object or object graph representing the parsed JSON. 
+
+
+-- Main.java
+The StreamExecutionEnvironment is the context in which a streaming program is executed. The environment provides methods to control the job execution (such as setting the parallelism or the fault tolerance/checkpointing parameters) and to interact with the outside world (data access).
+Every Flink application needs an execution environment, env in this example. Streaming applications need to use a StreamExecutionEnvironment.
+
+The DataStream API calls made in your application build a job graph that is attached to the StreamExecutionEnvironment. When env.execute() is called this graph is packaged up and sent to the JobManager, which parallelizes the job and distributes slices of it to the Task Managers for execution. Each parallel slice of your job will be executed in a task slot.
+
+Note that if you don’t call execute(), your application won’t be run.
+
+The KafkaSource reads messages stored in existing Apache Kafka topics, and sends those messages as CloudEvents through HTTP to its configured sink. The KafkaSource preserves the order of the messages stored in the topic partitions. It does this by waiting for a successful response from the sink before it delivers the next message in the same partition.
+
+DataStreamSource<Stock>: This creates a source for a data stream of type Stock. Stock would be a class that represents the data structure of the stream items.
+env.fromSource(...): This is a method from Flink’s StreamExecutionEnvironment to create a DataStream from a source.
+
+
+The map() method in Java Stream is a functional operation that transforms each element in a stream by applying a specified function to it.
+
+
+
+In Apache Flink, the AggregateFunction interface requires you to specify three types:
+
+Input Type: The type of elements that are fed into the aggregation.
+Accumulator Type: The type used to accumulate the results.
+Result Type: The type of the final result produced by the aggregation.
+
+1. Input Type
+The input type is the type of data being aggregated. In your case, it’s the Stock class. Each Stock object contains:
+
+stockName (String)
+stockPrice (Double)
+stockPriceChange (Double)
+
+2. Accumulator Type
+The accumulator type holds the intermediate results during aggregation. It should include:
+
+Sum of stock prices
+Sum of stock price changes
+Count of records
+Therefore, the accumulator type is Tuple3<Double, Double, Integer>, where:
+
+Tuple3.f0 is the sum of stock prices.
+Tuple3.f1 is the sum of stock price changes.
+Tuple3.f2 is the count of records.
+
+
+3. Result Type
+The result type is the final aggregated result. You want to calculate:
+
+The average stock price.
+The average stock price change.
+Therefore, the result type is Tuple2<Double, Double>, where:
+
+Tuple2.f0 is the average stock price.
+Tuple2.f1 is the average stock price change.

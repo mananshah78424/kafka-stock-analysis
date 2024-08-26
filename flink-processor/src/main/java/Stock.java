@@ -2,14 +2,14 @@ import java.util.Objects;
 public class Stock {
     public String stockName;
     public Double stockPrice;
-    public Double stockPriceChange;
+    // public Double stockPriceChange;
 
     //Default constructor
     public Stock (){}
-    public Stock(String stockName,String stockPrice, String stockPriceChange){
+    public Stock(String stockName,String stockPrice){
         this.stockName=stockName;
         this.stockPrice=Double.valueOf(stockPrice);
-        this.stockPriceChange=Double.valueOf(stockPriceChange);
+        // this.stockPriceChange=Double.valueOf(stockPriceChange);
     }
 
     @Override
@@ -17,7 +17,6 @@ public class Stock {
         return "Stock{" +
                "stockName='" + stockName + '\'' +
                ", stockPrice=" + stockPrice +
-               ", stockPriceChange=" + stockPriceChange +
                '}';
     }
     // public String toString(){
@@ -31,7 +30,7 @@ public class Stock {
     // }
 
     public int hashCode() {
-        return Objects.hash(super.hashCode(), stockName, stockPrice,stockPriceChange);
+        return Objects.hash(super.hashCode(), stockName, stockPrice);
     }
 
 

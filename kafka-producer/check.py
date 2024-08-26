@@ -1,24 +1,39 @@
 import datetime
+import logging
 import time
 from datetime import datetime, timedelta
-from json import dumps
 
-# import psycopg2
+import psycopg2
 import pytz
 import requests
 import schedule
 from bs4 import BeautifulSoup
-from kafka import KafkaProducer
-
-broker = "kafka:9092"
-topicname = "stockPrice"
 
 # Database connection details
 DB_HOST = "localhost"
 DB_NAME = "kafka"
-DB_USER = "postgres"
-DB_PASSWORD = ""  # if no password, leave it empty
+DB_USER = "kafkauser"
+DB_PASSWORD = "postgres"  # if no password, leave it empty
 
+import os
+
+log_dir = '/home/ubuntu/api-streaming/kafka-producer/logs'
+log_file = os.path.join(log_dir, 'kafkaapp.log')
+
+# Ensure the directory exists
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
+
+logging.info("Kafka producer started.")
 def web_content_div(web_content, test_id):
     element = web_content.find('fin-streamer', {'data-testid': test_id})
     if element:
@@ -41,7 +56,7 @@ def real_time_price(stock_code):
         change = web_content_div(web_content, 'qsp-price-change')
         return price, change
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred: {e}")
         return None, None
 
 def is_market_open():
@@ -62,52 +77,43 @@ def schedule_next_market_open():
     if now >= next_market_open:
         next_market_open += timedelta(days=1)
     schedule_time = next_market_open.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"Scheduling next market open check at: {schedule_time}")
+    logging.info(f"Scheduling next market open check at: {schedule_time}")
+
     schedule.every().day.at("09:30").do(main)
 
-# def insert_data_to_db(timestamp, stock_code, price, change):
-#     try:
-#         conn = psycopg2.connect(
-#             host=DB_HOST,
-#             database=DB_NAME,
-#             user=DB_USER,
-#             password=DB_PASSWORD
-#         )
-#         cur = conn.cursor()
-#         query = """
-#         INSERT INTO stock_prices (timestamp, stock_code, price, change)
-#         VALUES (%s, %s, %s, %s)
-#         """
-#         cur.execute(query, (timestamp, stock_code, price, change))
-#         conn.commit()
-#         print("Logged into database")
-#         cur.close()
-#         conn.close()
-#     except Exception as e:
-#         print(f"Database error: {e}")
-
+def insert_data_to_db(timestamp, stock_code, price, change):
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+        cur = conn.cursor()
+        query = """
+        INSERT INTO stock_prices (timestamp, stock_code, price, change)
+        VALUES (%s, %s, %s, %s)
+        """
+        cur.execute(query, (timestamp, stock_code, price, change))
+        conn.commit()
+        logging.info("Logged into database")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logging.error(f"Database error: {e}")
 
 def display_data():
-    producer = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda x:dumps(x).encode('utf-8'))
-
     if is_market_open():
-        stock_code='BRK-8'
-        price, change = real_time_price(stock_code)
+        price, change = real_time_price('BRK-B')
         now = datetime.now(pytz.timezone('US/Eastern'))
 
         if price and change:
-            print(f"stockPrice: {price}, stockPriceChange: {change}, Time: {now}")
-            try:
-                data = {"stockName": stock_code, "stockPrice": price,"stockPriceChange": change}
-                producer.send(topic=topicname, value=data)
-                producer.flush()
-            except Exception as e:
-                print("could not flush", e)
-            # insert_data_to_db(now, 'BRK-B', price, change)
+            logging.info(f"Price: {price}, Change: {change}, Time: {now}")
+            insert_data_to_db(now, 'BRK-B', price, change)
         else:
-            print("Failed to retrieve price or change.")
+            logging.warning("Failed to retrieve price or change.")
     else:
-        print("Market has closed")
+        logging.infot("Market has closed")
         schedule.clear()
 
 def main():
@@ -120,6 +126,7 @@ def main():
 if __name__ == "__main__":
     # If market is already open, run main immediately
     if is_market_open():
+        print("In parent main function for the first time and market is open now")
         main()
     else:
         # Otherwise, schedule it for the next market open

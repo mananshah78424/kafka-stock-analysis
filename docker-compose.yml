@@ -14,25 +14,62 @@ services:
       bridge:
         aliases:
           - zookeeper
+    ports:
+      - "32181:32181" # Expose Zookeeper port
+
+  # kafka:
+  #   image: confluentinc/cp-kafka
+  #   depends_on:
+  #     - zookeeper
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #     KAFKA_LISTENER_NAME_INTERNAL: INTERNAL://0.0.0.0:9093
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:9093
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     JMX_PORT: 9999
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+  #   networks:
+  #     bridge:
+  #       aliases:
+  #         - kafka
+  #   ports:
+  #     - "9092:9092" # Expose Kafka port
 
   kafka:
-    image: confluentinc/cp-kafka
+    image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ADVERTISED_HOST_NAME: 0.0.0.0
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_NAME_INTERNAL: INTERNAL://0.0.0.0:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:9093
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       JMX_PORT: 9999
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
     networks:
       bridge:
         aliases:
           - kafka
+    ports:
+      - "9092:9092" # Expose Kafka port
 
   kafka-producer:
-    image: stock-producer
+    image: kafka-producer
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_SERVER: "kafka:9092"
+      ZOOKEEPER_SERVER: "zookeeper:32181"
+      PRODUCER_INTERVAL: 100
+    networks:
+      - bridge
+
+  flink-processor:
+    image: flink-processor
     depends_on:
       - kafka
     environment:
