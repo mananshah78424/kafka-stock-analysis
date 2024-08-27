@@ -89,16 +89,14 @@ def schedule_next_market_open():
 
 def display_data():
     producer = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda x:dumps(x).encode('utf-8'))
-
     if is_market_open():
-        stock_code='BRK-8'
+        stock_code='BRK-B'
         price, change = real_time_price(stock_code)
         now = datetime.now(pytz.timezone('US/Eastern'))
-
         if price and change:
-            print(f"stockPrice: {price}, stockPriceChange: {change}, Time: {now}")
+            print(f"stockPrice: {price}, stockChange: {change}, Time: {now}")
             try:
-                data = {"stockName": stock_code, "stockPrice": price,"stockPriceChange": change}
+                data = {"stockName": stock_code, "stockPrice": price,"stockChange": change}
                 producer.send(topic=topicname, value=data)
                 producer.flush()
             except Exception as e:
