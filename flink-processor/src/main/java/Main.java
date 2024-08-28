@@ -40,21 +40,23 @@ public class Main {
             System.out.println("Kafka source created");
 
             // Define the DataStream for calculating average price and change
-            DataStream<Tuple2<MyAverage, Double>> stockStream = kafkaStream
-                .keyBy(stock -> stock.stockName) // Ensure stockName is a valid field
-                .window(TumblingProcessingTimeWindows.of(Time.seconds(60)))
-                .aggregate(new AverageAggregator());
+            DataStream<Tuple2<MyAverage, Tuple2<Double, Double>>> stockStream = kafkaStream
+            .keyBy(stock -> stock.stockName)
+            .window(TumblingProcessingTimeWindows.of(Time.seconds(60)))
+            .aggregate(new AverageAggregator());
 
-            DataStream<Tuple2<String, Double>> stockAndValueStream = stockStream
-                .map(new MapFunction<Tuple2<MyAverage, Double>, Tuple2<String, Double>>() {
+
+            DataStream<Tuple2<String, Tuple2<Double, Double>>> stockValueChange = stockStream
+            .map(new MapFunction<Tuple2<MyAverage, Tuple2<Double, Double>>, Tuple2<String, Tuple2<Double, Double>>>() {
                 @Override
-                public Tuple2<String, Double> map(Tuple2<MyAverage, Double> input) throws Exception {
-                    return new Tuple2<>(input.f0.name, input.f1);
+                public Tuple2<String, Tuple2<Double, Double>> map(Tuple2<MyAverage, Tuple2<Double, Double>> input) throws Exception {
+                    return new Tuple2<>(input.f0.name, input.f1); // Extract stock name and tuple of averages. This comes from stockStream
                 }
-                }); 
+            });
+
 
             System.out.println("Aggregation created");
-            stockAndValueStream.print();
+            stockValueChange.print();
             // Execute the Flink job
             env.execute("Stock Price Aggregation Job");
         } catch (Exception e) {
@@ -63,7 +65,7 @@ public class Main {
         }
     }
 
-    public static class AverageAggregator implements AggregateFunction<Stock, MyAverage, Tuple2<MyAverage, Double>> {
+    public static class AverageAggregator implements AggregateFunction<Stock, MyAverage, Tuple2<MyAverage, Tuple2<Double,Double>>> {
 
         // Create an initial accumulator
         @Override
@@ -78,6 +80,7 @@ public class Main {
                 myAverage.name = stock.stockName;          // Accumulate the Name
                 myAverage.count = myAverage.count + 1;   // Increment the count
                 myAverage.priceSum = myAverage.priceSum + stock.stockPrice; // Accumulate the price change
+                myAverage.changeSum=myAverage.changeSum+stock.stockChange;
             } catch (Exception e) {
                 System.err.println("An error occurred while adding to the accumulator:");
                 e.printStackTrace();
@@ -87,14 +90,17 @@ public class Main {
 
         // Compute the result from the accumulator
         @Override
-        public Tuple2<MyAverage, Double> getResult(MyAverage myAverage) {
-            return new Tuple2<>(myAverage, myAverage.priceSum / myAverage.count);
+        public Tuple2<MyAverage, Tuple2<Double, Double>> getResult(MyAverage acc) {
+            Double avgPrice = acc.priceSum / acc.count;
+            Double avgChange = acc.changeSum / acc.count;
+            return new Tuple2<>(acc, new Tuple2<>(avgPrice, avgChange));
         }
 
         // Merge two accumulators (used in case of session windows)
         @Override
         public MyAverage merge(MyAverage acc1, MyAverage acc2) {
             acc1.priceSum = acc1.priceSum + acc2.priceSum;
+            acc1.changeSum += acc2.changeSum;
             acc1.count = acc1.count + acc2.count;
             return acc1;
         }
@@ -105,6 +111,7 @@ public class Main {
         public String name;
         public Integer count = 0;
         public Double priceSum = 0d;
+        public Double changeSum=0d;
 
         @Override
         public String toString() {
@@ -112,6 +119,7 @@ public class Main {
                     "name='" + name + '\'' +
                     ", count=" + count +
                     ", sum=" + priceSum +
+                    ", change=" + changeSum+ 
                     '}';
         }
     }

@@ -67,6 +67,8 @@ services:
       PRODUCER_INTERVAL: 100
     networks:
       - bridge
+    ports:
+      - "3001:3001"
 
   flink-processor:
     image: flink-processor
@@ -76,5 +78,14 @@ services:
       KAFKA_SERVER: "kafka:9092"
       ZOOKEEPER_SERVER: "zookeeper:32181"
       PRODUCER_INTERVAL: 100
+    networks:
+      - bridge
+
+  client:
+    image: client
+    build:
+      context: ./client # Assuming your Vite client code is in the `client` directory
+    ports:
+      - "5173:5173" # Expose Vite client on port 5173
     networks:
       - bridge

@@ -1,6 +1,12 @@
 import datetime
 import time
 from datetime import datetime, timedelta
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
 from json import dumps
 
 # import psycopg2
@@ -87,10 +93,9 @@ def schedule_next_market_open():
 #         print(f"Database error: {e}")
 
 
-def display_data():
+def display_data(stock_code):
     producer = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda x:dumps(x).encode('utf-8'))
     if is_market_open():
-        stock_code='BRK-B'
         price, change = real_time_price(stock_code)
         now = datetime.now(pytz.timezone('US/Eastern'))
         if price and change:
@@ -108,23 +113,41 @@ def display_data():
         print("Market has closed")
         schedule.clear()
 
-def main():
+def main(stock_code):
     print("Executing Main function at - ", datetime.now(pytz.timezone('US/Eastern')))
     while is_market_open():
-        display_data()
+        display_data(stock_code)
         time.sleep(10)
     schedule_next_market_open()
 
-if __name__ == "__main__":
-    # If market is already open, run main immediately
+
+@app.route("/submit_stock_code", methods=["POST"])
+def submit_stock():
+    stock_code = request.json.get("stockCode")
+    print("Stock code searching is: ", stock_code)
     if is_market_open():
-        main()
+        main(stock_code)
     else:
         # Otherwise, schedule it for the next market open
         schedule_next_market_open()
     while True:
         schedule.run_pending()
         time.sleep(1)
+    # print("STOCK CODE IS ", stock_code)
+    # return jsonify({"status": "success", "stockCode": stock_code})
+
+
+if __name__ == "__main__":
+    # If market is already open, run main immediately
+    app.run(host="0.0.0.0", port=3001)
+    # if is_market_open():
+    #     main()
+    # else:
+    #     # Otherwise, schedule it for the next market open
+    #     schedule_next_market_open()
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(1)
 
 
 # CREATE TABLE stock_prices (
